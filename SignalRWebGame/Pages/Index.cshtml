@@ -1,10 +1,77 @@
 ﻿@page
-@model IndexModel
-@{
-    ViewData["Title"] = "Home page";
-}
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://docs.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
+<style>
+    #ball {
+        position: absolute;
+        cursor: pointer;
+    }
+</style>
+
+<img src="css/ball.png" id="ball" />
+
+<script src="~/js/signalr.js"></script>
+<script>
+  var isDown = false;
+  var isConnected = false;
+
+  var connection = new signalR.HubConnectionBuilder()
+    .withUrl('gameHub')
+    .withAutomaticReconnect([1000, 2000, 5000, 5000, 10000, 10000, 10000, 20000, 30000])
+    .build();
+
+  connection.on('moved', (y, x) => {
+    document.getElementById('ball').style.top = y;
+      document.getElementById('ball').style.left = x;
+  });
+
+  connection.onreconnecting((error) => {
+    isConnected = false;
+    isDown = false;
+      document.getElementById('ball').setAttribute(
+      'src',
+      'css/ball.png'
+    );
+  });
+
+  connection.onreconnected((error) => {
+    isConnected = true;
+    document.getElementById('ball').setAttribute(
+      'src',
+      'css/ball.png'
+    );
+  });
+
+  async function start() {
+    try {
+      connection.start().then(() => {
+          document.getElementById('ball').setAttribute(
+          'src',
+          'css/ball.png'
+        );
+        isConnected = true;
+      });
+    }
+    catch {
+      isConnected = false;
+    }
+  }
+
+  document.getElementById('ball').onclick = (ev) => {
+    if(isConnected == true) {
+      isDown = !isDown;
+    }
+  }
+
+  document.getElementById('ball').onmousemove = (ev) => moveBall(ev);
+
+  moveBall = (ev) => {
+    if(isDown == true && isConnected == true) {
+        document.getElementById('ball').style.top = ev.pageY - 60 + 'px';
+        document.getElementById('ball').style.left = ev.pageX - 60 + 'px';
+
+        connection.invoke('MoveBall', document.getElementById('ball').style.top, document.getElementById('ball').style.left);
+    }
+  }
+
+start();
+</script>
